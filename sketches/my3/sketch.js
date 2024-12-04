@@ -29,23 +29,13 @@ function update() {
 
   // Dégradé depuis le haut jusqu'à la position Y du curseur
   const backgroundGradient = ctx.createLinearGradient(0, 0, 0, mouseY);
-  backgroundGradient.addColorStop(0, "green");
-  backgroundGradient.addColorStop(1, "pink");
+  // backgroundGradient.addColorStop(0, "green");
+  // backgroundGradient.addColorStop(1, "pink");
+  backgroundGradient.addColorStop(0, "black");
+  backgroundGradient.addColorStop(1, "white");
 
   ctx.fillStyle = backgroundGradient;
   ctx.fillRect(0, 0, canvas.width, mouseY);
-
-  // Transition douce de l'opacité pour le texte
-  // let targetOpacity = 0;
-  // if (mouseYpercentage > 35) {
-  //   targetOpacity = (mouseYpercentage - 35) / 35;
-  // }
-
-  // let currentOpacity = Math.min(targetOpacity, 1);
-  // currentOpacity =
-  //   currentOpacity - (currentOpacity - targetOpacity) * opacitySlowdownFactor;
-
-  // ctx.globalAlpha = currentOpacity;
 
   // Dessin du texte "3"
   ctx.fillStyle = "transparent";
