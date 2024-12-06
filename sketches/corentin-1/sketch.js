@@ -1,11 +1,8 @@
 import { createEngine } from "../../shared/engine.js";
 import { Spring } from "./Spring.js";
 
-const { renderer, input, math, run, audio } = createEngine();
+const { renderer, input, math, run, audio, finish } = createEngine();
 const { ctx, canvas } = renderer;
-
-const pagelop = audio.load("./plop.wav");
-const explosionSound = await audio.load("./explosion.wav");
 
 let points = [];
 let pathPixels = [
@@ -241,7 +238,6 @@ function handleMouseClick(event) {
       vy: 0,
     };
     points.push(newPoint);
-    console.log(points);
   }
 }
 
@@ -274,11 +270,11 @@ function update(deltaTime) {
     if (!shouldDrop) {
       shouldDrop = true;
       dropStartTime = Date.now();
-      Explosion.play();
     }
   }
 
   if (shouldDrop) {
+    ctx.fillStyle = "white";
     const elapsedTime = Date.now() - dropStartTime;
 
     points.forEach((point) => {
@@ -288,7 +284,13 @@ function update(deltaTime) {
       point.vy += 10 * deltaTime;
     });
 
-    points = points.filter((point) => point.y < canvas.height);
+    points = points.filter(
+      (point) =>
+        point.y > 0 &&
+        point.y < canvas.height &&
+        point.x > 0 &&
+        point.x < canvas.width
+    );
 
     if (points.length === 0) {
       finish(); // Call finish() when all points are off-screen
