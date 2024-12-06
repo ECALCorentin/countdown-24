@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Calque_1" data-name="Calque 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 583.1">
+  <defs>
+    <style>
+      .cls-1 {
+        font-family: HelveticaNeue-Medium, 'Helvetica Neue';
+        font-size: 800px;
+        font-weight: 500;
+      }
+
+      .cls-1, .cls-2 {
+        fill: #fff;
+      }
+
+      .cls-2, .cls-3 {
+        stroke: #000;
+        stroke-miterlimit: 10;
+      }
+
+      .cls-3 {
+        fill: none;
+      }
+    </style>
+  </defs>
+  <text class="cls-1" transform="translate(276.54 571.69)"><tspan x="0" y="0">0</tspan></text>
+  <polyline class="cls-3" points="498.9 495.42 507.1 533.63 482.73 562.59 492.8 582.88"/>
+  <polyline class="cls-3" points="577.52 573.48 573.05 528.92 547.37 531.59 531.36 497.34"/>
+  <polyline class="cls-3" points="470.35 502.45 448.09 539.15 418.4 545.33 397.19 560.72"/>
+  <polyline class="cls-3" points="364.6 524.6 372.55 478.85 404.38 478.85 431.24 497.34 451.13 458.96"/>
+  <polyline class="cls-2" points="328.86 457.19 343.08 445.02 348.42 447.04 353.75 449.06 355.87 443.94 362.17 428.69"/>
+  <polyline class="cls-2" points="356.53 442.04 365.58 441.03 369.99 433.89"/>
+  <polyline class="cls-3" points="646.6 544.4 602.39 524.6 617.12 489.41 582.55 489.41 566.67 453.82"/>
+  <polyline class="cls-2" points="657.53 486.4 635.8 473.47 636.07 465.77 636.34 458.07 628.87 457.59 606.64 456.14"/>
+  <polyline class="cls-2" points="626.16 457.57 620.95 446.42 609.89 443.88"/>
+  <polyline class="cls-2" points="315.28 402.38 333.14 396.75 337.25 400.69 341.37 404.64 345.32 400.76 357.09 389.19"/>
+  <polyline class="cls-2" points="346.67 399.26 355.39 401.89 362.25 397.04"/>
+  <polyline class="cls-2" points="682.16 435.61 657.42 430.38 655.19 423 652.97 415.62 645.74 417.57 624.23 423.36"/>
+  <polyline class="cls-2" points="643.17 418.43 634.65 409.55 623.36 410.7"/>
+  <polyline class="cls-2" points="351.39 359.26 333.07 363.11 329.36 358.77 325.65 354.44 321.34 357.92 308.49 368.27"/>
+  <polyline class="cls-2" points="319.85 359.27 311.42 355.8 304.12 359.95"/>
+  <polyline class="cls-2" points="632.09 365.83 655.74 374.75 656.82 382.38 657.9 390.01 665.34 389.19 687.48 386.73"/>
+  <polyline class="cls-2" points="668.01 388.73 675.08 398.8 686.42 399.38"/>
+</svg>

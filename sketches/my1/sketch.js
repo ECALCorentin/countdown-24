@@ -5,14 +5,32 @@ const { renderer, input, math, run } = createEngine();
 const { ctx, canvas } = renderer;
 
 const points = [];
-const pathPixels = [
-  { x: 100, y: 100 },
-  { x: 200, y: 100 },
-  { x: 300, y: 100 },
-  { x: 1000, y: 100 },
-  { x: 300, y: 1000 },
-  { x: 100, y: 1000 },
-  { x: 100, y: 500 },
+let pathPixels = [
+  { x: 35.0, y: 355.85 },
+  { x: 229.23, y: 203.7 },
+  { x: 444.58, y: 35.0 },
+  { x: 585.08, y: 35.0 },
+  { x: 713.15, y: 35.0 },
+  { x: 713.15, y: 365.78 },
+  { x: 713.15, y: 672.78 },
+  { x: 713.15, y: 956.68 },
+  { x: 713.15, y: 1275.3 },
+  { x: 871.3, y: 1275.3 },
+  { x: 1023.68, y: 1275.3 },
+  { x: 1023.68, y: 1416.02 },
+  { x: 1023.68, y: 1553.08 },
+  { x: 511.83, y: 1553.08 },
+  { x: 35.0, y: 1553.08 },
+  { x: 35.0, y: 1416.02 },
+  { x: 35.0, y: 1276.32 },
+  { x: 225.0, y: 1276.32 },
+  { x: 414.83, y: 1276.32 },
+  { x: 414.83, y: 855.13 },
+  { x: 414.83, y: 379.53 },
+  { x: 228.7, y: 526.2 },
+  { x: 35.0, y: 678.82 },
+  { x: 35.0, y: 504.28 },
+  { x: 35.0, y: 355.85 },
 ];
 
 console.log(pathPixels);
@@ -40,29 +58,46 @@ function resizeCanvas() {
   canvas.height = window.innerHeight;
 }
 
+// Fonction pour centrer les points dans le canvas
+function centerPathPixels() {
+  // Calculer le centre géométrique du tableau de points
+  let centroidX = 0;
+  let centroidY = 0;
+
+  for (const point of pathPixels) {
+    centroidX += point.x;
+    centroidY += point.y;
+  }
+
+  centroidX /= pathPixels.length;
+  centroidY /= pathPixels.length;
+
+  // Calculer le décalage nécessaire pour centrer par rapport au centre du canvas
+  const offsetX = canvas.width / 2 - centroidX;
+  const offsetY = canvas.height / 2 - centroidY;
+
+  // Appliquer le décalage à chaque point
+  for (const point of pathPixels) {
+    point.x += offsetX;
+    point.y += offsetY;
+  }
+}
+
 function drawTextAndExtractPath() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = "black";
+
+  // Déterminer la couleur en fonction du nombre de points
+  const maxPoints = 150; // Nombre maximum de points autorisés avant de changer la couleur
+  const fillColor = points.length > maxPoints ? "white" : "black";
+
+  // Dessiner le texte "1" avec la couleur déterminée
+  ctx.fillStyle = fillColor;
   ctx.font = `${canvas.height}px Helvetica Neue, Helvetica, bold`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText("1", canvas.width / 2, canvas.height / 2);
 
-  /*
-  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height, {
-    willReadFrequently: true,
-  });
-  const data = imageData.data;
-  pathPixels = [];
-
-  for (let y = 0; y < canvas.height; y++) {
-    for (let x = 0; x < canvas.width; x++) {
-      const index = (y * canvas.width + x) * 4;
-      if (data[index + 3] > 128) {
-        pathPixels.push({ x, y });
-      }
-    }
-  }*/
+  centerPathPixels();
 }
 
 function getPositionOnLineInfo(positionOnLine) {
@@ -114,7 +149,7 @@ function movePointToPath(point) {
   );
 
   const stiffness = 0.05;
-  const damping = 0.8;
+  const damping = 0.4;
 
   const dx = targetX - point.x;
   const dy = targetY - point.y;
@@ -143,35 +178,37 @@ function pushAlongLine(point1, point2) {
     force = Math.random() * 10;
   }
 
-  ctx.beginPath();
-  ctx.strokeStyle = "red";
-  ctx.moveTo(point1.x, point1.y);
+  const midX = (point1.x + point2.x) / 2;
+  const midY = (point1.y + point2.y) / 2;
 
+  const maxLineWidth = 20;
+  const minLineWidth = 0;
+  const t = 1 - Math.abs(dist / 100);
+  const lineWidth = math.lerp(minLineWidth, maxLineWidth, t);
+
+  ctx.beginPath();
+  ctx.lineWidth = lineWidth;
+  ctx.strokeStyle = "transparent";
+  ctx.moveTo(point1.x, point1.y);
   ctx.lineTo(point2.x, point2.y);
   ctx.stroke();
 
   point1.accelerationOnLine += -force / 2;
   point2.accelerationOnLine += force / 2;
 }
+
 function updateAlongLine(point, deltaTime) {
   point.velocityOnLine *= 0.9;
   point.velocityOnLine += point.accelerationOnLine * deltaTime;
   point.positionOnLine += point.velocityOnLine * deltaTime;
 
   point.positionOnLine = math.repeat(point.positionOnLine, totalLineLength);
-  // if (point.positionOnLine < 0) {
-  //   point.positionOnLine = 0;
-  // }
-  // if (point.positionOnLine > totalLineLength) {
-  //   point.positionOnLine = totalLineLength;
-  // }
 
   point.accelerationOnLine = 0;
 }
 
-// Function to draw points on the canvas
 function drawPoints(deltaTime) {
-  ctx.fillStyle = "white";
+  ctx.fillStyle = "grey";
   points.sort((a, b) => a.positionOnLine - b.positionOnLine);
   points.forEach((point, index) => {
     movePointToPath(point);
@@ -179,25 +216,34 @@ function drawPoints(deltaTime) {
     pushAlongLine(point, points[nextId]);
     updateAlongLine(point, deltaTime);
 
-    // ctx.fillStyle =
-    //  index === 0 || index === points.length - 1 ? "white" : "blue";
     ctx.beginPath();
     ctx.arc(point.x, point.y, 20, 0, Math.PI * 2);
     ctx.fill();
   });
 }
 
-// Handle mouse click to place points
+function dropAllPoints(deltaTime) {
+  ctx.fillStyle = "white"; // Changer la couleur
+  points.forEach((point) => {
+    point.y += 100 * deltaTime; // Déplacement plus lent hors écran
+  });
+
+  points.forEach((point) => {
+    ctx.beginPath();
+    ctx.arc(point.x, point.y, 20, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  points = points.filter((point) => point.y < canvas.height);
+}
+
 function handleMouseClick(event) {
-  // This function allows user clicks to place points
   const mouseXpercentage = (event.clientX / window.innerWidth) * 100;
   const mouseYpercentage = (event.clientY / window.innerHeight) * 100;
 
-  // Convert mouse position to actual canvas coordinates
   const clickedX = (mouseXpercentage / 100) * canvas.width;
   const clickedY = (mouseYpercentage / 100) * canvas.height;
 
-  // Find the closest point on the path to the clicked point
   let closestPoint = pathPixels[0];
   let minDistance = Infinity;
 
@@ -210,14 +256,6 @@ function handleMouseClick(event) {
   }
 
   let tooClose = false;
-  /*
-  for (const point of points) {
-    const distance = Math.hypot(point.x - clickedX, point.y - clickedY);
-    if (distance < minPointDistance) {
-      tooClose = true;
-      break;
-    }
-  }*/
 
   if (!tooClose) {
     const newPoint = {
@@ -235,16 +273,41 @@ function handleMouseClick(event) {
   }
 }
 
+let shouldDrop = false; // État pour déclencher la chute des points
+let dropStartTime = null; // Timestamp pour enregistrer le début du délai
+const dropDelay = 2000;
+
 function update(deltaTime) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  drawTextAndExtractPath();
-  drawPoints(deltaTime);
-}
 
-window.addEventListener("resize", () => {
-  resizeCanvas();
-  drawTextAndExtractPath();
-});
+  if (points.length >= 80) {
+    if (!shouldDrop) {
+      // Enregistrer le moment où le seuil est atteint
+      shouldDrop = true;
+      dropStartTime = Date.now();
+    }
+  }
+
+  if (shouldDrop) {
+    const elapsedTime = Date.now() - dropStartTime;
+
+    if (elapsedTime >= dropDelay) {
+      // Si le délai est écoulé, faire chuter les points
+      dropAllPoints(deltaTime);
+    } else {
+      // Pendant le délai, afficher les points en rouge
+      ctx.fillStyle = "white";
+      points.forEach((point) => {
+        ctx.beginPath();
+        ctx.arc(point.x, point.y, 20, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+  } else {
+    drawTextAndExtractPath();
+    drawPoints(deltaTime);
+  }
+}
 
 canvas.addEventListener("click", handleMouseClick);
 

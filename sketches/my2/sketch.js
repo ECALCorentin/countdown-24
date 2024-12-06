@@ -3,7 +3,7 @@ import { createEngine } from "../../shared/engine.js";
 const { renderer, input, math, run } = createEngine();
 const { ctx, canvas } = renderer;
 
-let numSections = 10; // Initial number of segments
+let numSections = 24;
 let mouseXpercentage = 0;
 let rotation = 0;
 let rotationSpeed = 0;
@@ -11,10 +11,25 @@ let grabbing = false;
 let grabRotationOffset = 0;
 let detectedValue = null;
 let lastStoppedSegment = null;
+let revealSpeed = 0.05;
+let revealTimer = 0;
+let disappearing = false; // Indique si la roue est en train de disparaître
+let disappearanceProgress = 1; // Progression de la disparition (1 = pleine visibilité)
 
 let values = generateValues(numSections);
+let revealedSegments = Array(numSections).fill(false);
+let revealIndex = 0;
+
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+
+window.addEventListener("resize", resizeCanvas);
+resizeCanvas(); // Initial resize when the page loads
 
 const windowWidth = window.innerWidth;
+const windowHeight = window.innerHeight;
 
 canvas.addEventListener("mousemove", (event) => {
   mouseXpercentage = Math.round((event.pageX / windowWidth) * 100);
@@ -24,6 +39,8 @@ canvas.addEventListener("click", (event) => {
   if (mouseXpercentage >= 45 && mouseXpercentage <= 55) {
     numSections += 2;
     values = generateValues(numSections);
+    revealedSegments = Array(numSections).fill(false);
+    revealIndex = 0;
   }
 });
 
@@ -33,26 +50,29 @@ function generateValues(numSections) {
   if (numSections <= 2) {
     maxTwos = 1;
   } else if (numSections >= 4 && numSections <= 30) {
-    maxTwos = 2;
+    maxTwos = 5;
   } else {
-    maxTwos = 3;
+    maxTwos = 8;
   }
 
   let twosPlaced = 0;
   let generatedValues = [];
+  let lastTwoIndex = -Infinity;
 
   for (let i = 0; i < numSections; i++) {
     let newValue;
 
     do {
-      newValue = Math.floor(Math.random() * 3);
+      newValue = Math.floor(Math.random() * 4);
     } while (
       newValue === 2 &&
-      (twosPlaced >= maxTwos || (i > 0 && generatedValues[i - 1] === 2))
+      (twosPlaced >= maxTwos ||
+        i - lastTwoIndex < Math.floor(Math.random() * 2) + 2) // 2 à 3 cases d'espacement
     );
 
     if (newValue === 2) {
       twosPlaced++;
+      lastTwoIndex = i; // Mémorise l'index de la dernière occurrence d'un 2
     }
 
     generatedValues.push(newValue);
@@ -66,7 +86,17 @@ function update(deltaTime) {
 
   const circleX = canvas.width / 2;
   const circleY = canvas.height / 2;
-  const radius = canvas.width / 2;
+  const radius =
+    (Math.min(canvas.width, canvas.height) / 2.2) * disappearanceProgress; // Réduction de la taille
+
+  // Gérer la disparition
+  if (disappearing) {
+    disappearanceProgress -= deltaTime * 1; // Ajuste la vitesse de disparition
+    if (disappearanceProgress <= 0) {
+      disappearanceProgress = 0; // Empêche une progression négative
+      return; // Arrête de dessiner si la roue est totalement disparue
+    }
+  }
 
   if (input.isPressed()) {
     const mouseXRelative = input.getX() - circleX;
@@ -107,21 +137,49 @@ function update(deltaTime) {
   const normalizedRotation =
     ((rotation % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
 
+  const fixedAngle = 0.05;
+
+  let stoppedSegmentIndex = null;
   if (!grabbing && Math.abs(rotationSpeed) < 0.0005) {
-    const stoppedSegmentIndex =
-      Math.floor(normalizedRotation / segmentAngle) % numSections;
+    stoppedSegmentIndex =
+      Math.floor(
+        ((fixedAngle - normalizedRotation + 2 * Math.PI) % (2 * Math.PI)) /
+          segmentAngle
+      ) % numSections;
 
     if (lastStoppedSegment !== stoppedSegmentIndex) {
       detectedValue = values[stoppedSegmentIndex];
       lastStoppedSegment = stoppedSegmentIndex;
-      console.log("Wheel stopped on number", detectedValue);
+      console.log(
+        "Le segment gagnant est le segment",
+        stoppedSegmentIndex,
+        "avec la valeur",
+        detectedValue
+      );
+
+      // Déclenche la disparition si le segment gagnant est un 2
+      if (detectedValue === 2) {
+        disappearing = true;
+      }
     }
+  }
+
+  revealTimer += deltaTime;
+
+  if (revealTimer >= revealSpeed) {
+    if (revealIndex < numSections) {
+      revealedSegments[revealIndex] = true;
+      revealIndex++;
+    }
+    revealTimer = 0;
   }
 
   ctx.save();
   ctx.translate(circleX, circleY);
   ctx.rotate(rotation);
   for (let i = 0; i < numSections; i++) {
+    if (!revealedSegments[i]) continue;
+
     const angleStart = (i * 2 * Math.PI) / numSections;
     const angleEnd = ((i + 1) * 2 * Math.PI) / numSections;
 
@@ -130,9 +188,10 @@ function update(deltaTime) {
     ctx.arc(0, 0, radius, angleStart, angleEnd);
     ctx.closePath();
 
-    // Highlight segments with value 2
-    if (values[i] === 2) {
-      ctx.fillStyle = "pink"; // Highlight color for segments with value 2
+    if (i === stoppedSegmentIndex) {
+      ctx.fillStyle = "yellow";
+    } else if (values[i] === 2) {
+      ctx.fillStyle = "pink";
     } else {
       ctx.fillStyle = i % 2 === 0 ? "grey" : "white";
     }
@@ -155,7 +214,7 @@ function update(deltaTime) {
   }
   ctx.restore();
 
-  const innerRadius = canvas.width / 15;
+  const innerRadius = (canvas.width / 15) * disappearanceProgress;
   ctx.fillStyle = "black";
   ctx.beginPath();
   ctx.arc(circleX, circleY, innerRadius, 0, Math.PI * 2);

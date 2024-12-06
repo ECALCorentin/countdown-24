@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Calque_1" data-name="Calque 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 583.32">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: #fff;
+        font-family: HelveticaNeue-Medium, 'Helvetica Neue';
+        font-size: 800px;
+        font-weight: 500;
+      }
+
+      .cls-2 {
+        fill: none;
+        stroke: #000;
+        stroke-miterlimit: 10;
+      }
+    </style>
+  </defs>
+  <text class="cls-1" transform="translate(276.54 571.69)"><tspan x="0" y="0">0</tspan></text>
+  <polyline class="cls-2" points="498.9 495.42 507.1 533.63 482.73 562.59 492.8 582.88"/>
+  <polyline class="cls-2" points="470.35 502.45 448.09 539.15 418.4 545.33 397.19 560.72"/>
+  <polyline class="cls-2" points="577.52 573.48 573.05 528.92 547.37 531.59 531.36 497.34"/>
+</svg>
