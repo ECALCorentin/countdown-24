@@ -1,10 +1,13 @@
 import { createEngine } from "../../shared/engine.js";
 import { Spring } from "./Spring.js";
 
-const { renderer, input, math, run } = createEngine();
+const { renderer, input, math, run, audio } = createEngine();
 const { ctx, canvas } = renderer;
 
-const points = [];
+const pagelop = audio.load("./plop.wav");
+const explosionSound = await audio.load("./explosion.wav");
+
+let points = [];
 let pathPixels = [
   { x: 35.0, y: 355.85 },
   { x: 229.23, y: 203.7 },
@@ -33,8 +36,6 @@ let pathPixels = [
   { x: 35.0, y: 355.85 },
 ];
 
-console.log(pathPixels);
-
 let posOnLine = 0;
 pathPixels[0].positionOnLine = posOnLine;
 let prevX = pathPixels[0].x;
@@ -51,16 +52,14 @@ posOnLine += math.dist(prevX, prevY, pathPixels[0].x, pathPixels[0].y);
 const totalLineLength = posOnLine;
 console.log(totalLineLength);
 
-const minPointDistance = 10; // Minimum distance between points to avoid overlap
+const minPointDistance = 10;
 
 function resizeCanvas() {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
 }
 
-// Fonction pour centrer les points dans le canvas
 function centerPathPixels() {
-  // Calculer le centre géométrique du tableau de points
   let centroidX = 0;
   let centroidY = 0;
 
@@ -71,8 +70,6 @@ function centerPathPixels() {
 
   centroidX /= pathPixels.length;
   centroidY /= pathPixels.length;
-
-  // Calculer le décalage nécessaire pour centrer par rapport au centre du canvas
   const offsetX = canvas.width / 2 - centroidX;
   const offsetY = canvas.height / 2 - centroidY;
 
@@ -85,8 +82,6 @@ function centerPathPixels() {
 
 function drawTextAndExtractPath() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  // Déterminer la couleur en fonction du nombre de points
   const maxPoints = 150; // Nombre maximum de points autorisés avant de changer la couleur
   const fillColor = points.length > maxPoints ? "white" : "black";
 
@@ -156,9 +151,6 @@ function movePointToPath(point) {
 
   point.vx = (point.vx + dx * stiffness) * damping;
   point.vy = (point.vy + dy * stiffness) * damping;
-
-  point.x += point.vx;
-  point.y += point.vy;
 }
 
 function pushAlongLine(point1, point2) {
@@ -188,7 +180,7 @@ function pushAlongLine(point1, point2) {
 
   ctx.beginPath();
   ctx.lineWidth = lineWidth;
-  ctx.strokeStyle = "transparent";
+  ctx.strokeStyle = "pink";
   ctx.moveTo(point1.x, point1.y);
   ctx.lineTo(point2.x, point2.y);
   ctx.stroke();
@@ -207,35 +199,16 @@ function updateAlongLine(point, deltaTime) {
   point.accelerationOnLine = 0;
 }
 
-function drawPoints(deltaTime) {
-  ctx.fillStyle = "grey";
-  points.sort((a, b) => a.positionOnLine - b.positionOnLine);
+function updatePointsOnLine(deltaTime) {}
+function drawPoints() {
   points.forEach((point, index) => {
-    movePointToPath(point);
-    const nextId = math.repeat(index + 1, points.length);
-    pushAlongLine(point, points[nextId]);
-    updateAlongLine(point, deltaTime);
-
     ctx.beginPath();
     ctx.arc(point.x, point.y, 20, 0, Math.PI * 2);
     ctx.fill();
   });
 }
 
-function dropAllPoints(deltaTime) {
-  ctx.fillStyle = "white"; // Changer la couleur
-  points.forEach((point) => {
-    point.y += 100 * deltaTime; // Déplacement plus lent hors écran
-  });
-
-  points.forEach((point) => {
-    ctx.beginPath();
-    ctx.arc(point.x, point.y, 20, 0, Math.PI * 2);
-    ctx.fill();
-  });
-
-  points = points.filter((point) => point.y < canvas.height);
-}
+function dropAllPoints(deltaTime) {}
 
 function handleMouseClick(event) {
   const mouseXpercentage = (event.clientX / window.innerWidth) * 100;
@@ -267,10 +240,25 @@ function handleMouseClick(event) {
       vx: 0,
       vy: 0,
     };
-
     points.push(newPoint);
     console.log(points);
   }
+}
+
+function fillPathInterior(color) {
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  // Début du chemin avec le premier point
+  ctx.moveTo(pathPixels[0].x, pathPixels[0].y);
+
+  // Ajout de chaque point au chemin
+  for (let i = 1; i < pathPixels.length; i++) {
+    ctx.lineTo(pathPixels[i].x, pathPixels[i].y);
+  }
+
+  // Fermer le chemin pour relier le dernier point au premier
+  ctx.closePath();
+  ctx.fill(); // Remplir l'intérieur du contour
 }
 
 let shouldDrop = false; // État pour déclencher la chute des points
@@ -280,33 +268,49 @@ const dropDelay = 2000;
 function update(deltaTime) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  if (points.length >= 80) {
+  if (points.length >= 85) {
+    fillPathInterior("white");
+
     if (!shouldDrop) {
-      // Enregistrer le moment où le seuil est atteint
       shouldDrop = true;
       dropStartTime = Date.now();
+      Explosion.play();
     }
   }
 
   if (shouldDrop) {
     const elapsedTime = Date.now() - dropStartTime;
 
-    if (elapsedTime >= dropDelay) {
-      // Si le délai est écoulé, faire chuter les points
-      dropAllPoints(deltaTime);
-    } else {
-      // Pendant le délai, afficher les points en rouge
-      ctx.fillStyle = "white";
-      points.forEach((point) => {
-        ctx.beginPath();
-        ctx.arc(point.x, point.y, 20, 0, Math.PI * 2);
-        ctx.fill();
-      });
+    points.forEach((point) => {
+      const pushForce = 0.1;
+      point.vx += (point.x - canvas.width / 2) * deltaTime * pushForce;
+      point.vy += (point.y - canvas.height / 2) * deltaTime * pushForce;
+      point.vy += 10 * deltaTime;
+    });
+
+    points = points.filter((point) => point.y < canvas.height);
+
+    if (points.length === 0) {
+      finish(); // Call finish() when all points are off-screen
+      return;
     }
   } else {
     drawTextAndExtractPath();
-    drawPoints(deltaTime);
+    ctx.fillStyle = "grey";
+
+    points.sort((a, b) => a.positionOnLine - b.positionOnLine);
+    points.forEach((point, index) => {
+      movePointToPath(point);
+      const nextId = math.repeat(index + 1, points.length);
+      pushAlongLine(point, points[nextId]);
+      updateAlongLine(point, deltaTime);
+    });
   }
+  points.forEach((point) => {
+    point.x += point.vx;
+    point.y += point.vy;
+  });
+  drawPoints();
 }
 
 canvas.addEventListener("click", handleMouseClick);

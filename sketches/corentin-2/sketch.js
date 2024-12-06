@@ -1,10 +1,9 @@
 import { createEngine } from "../../shared/engine.js";
 
-const { renderer, input, math, run } = createEngine();
+const { renderer, input, math, run, audio, finish } = createEngine();
 const { ctx, canvas } = renderer;
 
-let numSections = 24;
-let mouseXpercentage = 0;
+let numSections = 30;
 let rotation = 0;
 let rotationSpeed = 0;
 let grabbing = false;
@@ -13,12 +12,21 @@ let detectedValue = null;
 let lastStoppedSegment = null;
 let revealSpeed = 0.05;
 let revealTimer = 0;
-let disappearing = false; // Indique si la roue est en train de disparaître
-let disappearanceProgress = 1; // Progression de la disparition (1 = pleine visibilité)
+let disappearing = false;
+let disappearanceProgress = 1;
 
+let lastActiveSlot = 0;
 let values = generateValues(numSections);
 let revealedSegments = Array(numSections).fill(false);
 let revealIndex = 0;
+
+let delayBeforeStart = 2; // Seconds before the wheel appears
+let startTimer = 0;
+let wheelVisible = false; // Indicates if the wheel is visible
+let finished = false; // Flag to track if finish() has been called
+
+const clickSound = await audio.load("./click.wav");
+const correctSound = await audio.load("./Correct.wav");
 
 function resizeCanvas() {
   canvas.width = window.innerWidth;
@@ -26,38 +34,13 @@ function resizeCanvas() {
 }
 
 window.addEventListener("resize", resizeCanvas);
-resizeCanvas(); // Initial resize when the page loads
-
-const windowWidth = window.innerWidth;
-const windowHeight = window.innerHeight;
-
-canvas.addEventListener("mousemove", (event) => {
-  mouseXpercentage = Math.round((event.pageX / windowWidth) * 100);
-});
-
-canvas.addEventListener("click", (event) => {
-  if (mouseXpercentage >= 45 && mouseXpercentage <= 55) {
-    numSections += 2;
-    values = generateValues(numSections);
-    revealedSegments = Array(numSections).fill(false);
-    revealIndex = 0;
-  }
-});
+resizeCanvas();
 
 function generateValues(numSections) {
-  let maxTwos;
-
-  if (numSections <= 2) {
-    maxTwos = 1;
-  } else if (numSections >= 4 && numSections <= 30) {
-    maxTwos = 5;
-  } else {
-    maxTwos = 8;
-  }
-
+  let maxTwos = 1;
   let twosPlaced = 0;
   let generatedValues = [];
-  let lastTwoIndex = -Infinity;
+  const fixedIndex = Math.floor((0.05 / (2 * Math.PI)) * numSections); // Winning segment index
 
   for (let i = 0; i < numSections; i++) {
     let newValue;
@@ -65,16 +48,11 @@ function generateValues(numSections) {
     do {
       newValue = Math.floor(Math.random() * 4);
     } while (
-      newValue === 2 &&
-      (twosPlaced >= maxTwos ||
-        i - lastTwoIndex < Math.floor(Math.random() * 2) + 2) // 2 à 3 cases d'espacement
+      (newValue === 2 && twosPlaced >= maxTwos) || // Enforce max '2's
+      (i === fixedIndex && newValue === 2) // Avoid '2' on the winning segment
     );
 
-    if (newValue === 2) {
-      twosPlaced++;
-      lastTwoIndex = i; // Mémorise l'index de la dernière occurrence d'un 2
-    }
-
+    if (newValue === 2) twosPlaced++;
     generatedValues.push(newValue);
   }
 
@@ -82,19 +60,40 @@ function generateValues(numSections) {
 }
 
 function update(deltaTime) {
+  if (finished) return; // Stop updating if finish() has been called
+
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Handle delay before showing the wheel
+  if (!wheelVisible) {
+    startTimer += deltaTime;
+    if (startTimer >= delayBeforeStart) {
+      wheelVisible = true;
+    } else {
+      ctx.font = `${canvas.width / 20}px Helvetica Neue, Helvetica, bold`;
+      ctx.fillStyle = "black";
+      ctx.textAlign = "center";
+      ctx.fillText("Loading...", canvas.width / 2, canvas.height / 2);
+      return;
+    }
+  }
 
   const circleX = canvas.width / 2;
   const circleY = canvas.height / 2;
   const radius =
-    (Math.min(canvas.width, canvas.height) / 2.2) * disappearanceProgress; // Réduction de la taille
+    (Math.min(canvas.width, canvas.height) / 2.2) * disappearanceProgress;
 
-  // Gérer la disparition
+  // Handle wheel disappearance
   if (disappearing) {
-    disappearanceProgress -= deltaTime * 1; // Ajuste la vitesse de disparition
+    disappearanceProgress -= deltaTime * 1;
     if (disappearanceProgress <= 0) {
-      disappearanceProgress = 0; // Empêche une progression négative
-      return; // Arrête de dessiner si la roue est totalement disparue
+      disappearanceProgress = 0;
+
+      if (!finished) {
+        finish(); // Call finish() when the wheel disappears completely
+        finished = true; // Prevent further updates
+      }
+      return;
     }
   }
 
@@ -150,21 +149,23 @@ function update(deltaTime) {
     if (lastStoppedSegment !== stoppedSegmentIndex) {
       detectedValue = values[stoppedSegmentIndex];
       lastStoppedSegment = stoppedSegmentIndex;
-      console.log(
-        "Le segment gagnant est le segment",
-        stoppedSegmentIndex,
-        "avec la valeur",
-        detectedValue
-      );
 
-      // Déclenche la disparition si le segment gagnant est un 2
       if (detectedValue === 2) {
+        correctSound.play();
         disappearing = true;
       }
     }
   }
 
   revealTimer += deltaTime;
+
+  const currentActiveSlot = Math.round((rotation / Math.PI / 2) * numSections);
+  if (lastActiveSlot !== currentActiveSlot) {
+    clickSound.play({
+      volume: math.lerp(0.5, 1, Math.random()),
+    });
+    lastActiveSlot = currentActiveSlot;
+  }
 
   if (revealTimer >= revealSpeed) {
     if (revealIndex < numSections) {
@@ -174,6 +175,7 @@ function update(deltaTime) {
     revealTimer = 0;
   }
 
+  // Draw the wheel
   ctx.save();
   ctx.translate(circleX, circleY);
   ctx.rotate(rotation);
@@ -188,16 +190,8 @@ function update(deltaTime) {
     ctx.arc(0, 0, radius, angleStart, angleEnd);
     ctx.closePath();
 
-    if (i === stoppedSegmentIndex) {
-      ctx.fillStyle = "yellow";
-    } else if (values[i] === 2) {
-      ctx.fillStyle = "pink";
-    } else {
-      ctx.fillStyle = i % 2 === 0 ? "grey" : "white";
-    }
+    ctx.fillStyle = values[i] === 2 ? "pink" : i % 2 === 0 ? "grey" : "white";
     ctx.fill();
-
-    ctx.fillStyle = i % 2 === 0 ? "white" : "black";
 
     const angleMiddle = (angleStart + angleEnd) / 2;
     const textX = (radius / 1.15) * Math.cos(angleMiddle);
@@ -209,11 +203,29 @@ function update(deltaTime) {
     ctx.font = `${canvas.width / 30}px Helvetica Neue, Helvetica, bold`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
+    ctx.fillStyle = i % 2 === 0 ? "white" : "black";
     ctx.fillText(values[i], 0, 0);
     ctx.restore();
   }
   ctx.restore();
 
+  // Draw the triangle indicator
+  ctx.save();
+  ctx.translate(circleX, circleY); // Move to the center of the wheel
+  ctx.rotate((95 * Math.PI) / 180); // Rotate by 95 degrees to the right
+
+  ctx.fillStyle = "pink";
+  const triangleSize = 80;
+  ctx.beginPath();
+  ctx.moveTo(0, -radius - triangleSize); // Position the triangle relative to the new rotation
+  ctx.lineTo(-triangleSize / 2, -radius - triangleSize * 2);
+  ctx.lineTo(triangleSize / 2, -radius - triangleSize * 2);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.restore(); // Restore original context state
+
+  // Draw the inner circle
   const innerRadius = (canvas.width / 15) * disappearanceProgress;
   ctx.fillStyle = "black";
   ctx.beginPath();

@@ -1,7 +1,7 @@
 import { createEngine } from "../../shared/engine.js";
 import { createSpringSettings, Spring } from "../../shared/spring.js";
 
-const { renderer, input, math, run, finish } = createEngine();
+const { renderer, input, math, run, audio } = createEngine();
 const { ctx, canvas } = renderer;
 run(update);
 
