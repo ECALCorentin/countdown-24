@@ -190,7 +190,7 @@ function update(deltaTime) {
     ctx.arc(0, 0, radius, angleStart, angleEnd);
     ctx.closePath();
 
-    ctx.fillStyle = values[i] === 2 ? "pink" : i % 2 === 0 ? "grey" : "white";
+    ctx.fillStyle = values[i] === 2 ? "pink" : i % 2 === 0 ? "black" : "white";
     ctx.fill();
 
     const angleMiddle = (angleStart + angleEnd) / 2;

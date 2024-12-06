@@ -65,7 +65,7 @@ function update() {
   // Create a background gradient
   const backgroundGradient = ctx.createLinearGradient(0, 0, 0, mouseY);
   backgroundGradient.addColorStop(0, "black");
-  backgroundGradient.addColorStop(1, "white");
+  backgroundGradient.addColorStop(1, "pink");
 
   // Apply fade-out effect to the background
   ctx.fillStyle = backgroundGradient;
@@ -82,8 +82,8 @@ function update() {
   ctx.textBaseline = "middle";
   ctx.fillText("3", canvas.width / 2, canvas.height / 2);
 
-  ctx.globalCompositeOperation = "difference";
-  ctx.fillStyle = "white";
+  ctx.globalCompositeOperation = "";
+  ctx.fillStyle = "black";
   ctx.fillText("3", canvas.width / 2, canvas.height / 2);
 
   ctx.globalCompositeOperation = "source-over";

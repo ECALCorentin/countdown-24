@@ -298,7 +298,7 @@ function update(deltaTime) {
     }
   } else {
     drawTextAndExtractPath();
-    ctx.fillStyle = "grey";
+    ctx.fillStyle = "white";
 
     points.sort((a, b) => a.positionOnLine - b.positionOnLine);
     points.forEach((point, index) => {
